@@ -1,0 +1,132 @@
+//@version=5
+indicator(title='Swing Points', shorttitle='Swing H/L', overlay=true, max_lines_count=500, max_labels_count=500)
+
+len = input.int(title='Length', defval=2, minval=1)
+
+point_max = input.int(title='Maximum Points Displayed', defval=10, minval=0, maxval=250)
+
+show_high = input.bool(title='High', defval=true, inline='show', group='Show pivots?')
+show_low = input.bool(title='Low', defval=true, inline='show', group='Show pivots?')
+show_lines = input.bool(title='Lines', defval=false, inline='show', group='Show pivots?')
+
+del_high = input.bool(title='High', defval=true, inline='del', group='Delete crossed pivots?')
+del_low = input.bool(title='Low', defval=true, inline='del', group='Delete crossed pivots?')
+
+color_high = input.color(title='High', defval=color.new(color.white, 25), inline='style', group='Label style')
+style_high_option = input.string(title='', defval='Triangle down (▼)', options=['Triangle up (▲)', 'Triangle down (▼)', 'Arrow up (↑)', 'Arrow down (↓)', 'Label up (⬆)', 'Label down (⬇)', 'Plus (+)', 'Cross (⨯)', 'Circle (●)', 'Diamond (◆)', 'Flag (⚑)', 'Square (■)', 'None'], inline='style', group='Label style')
+color_low = input.color(title='Low', defval=color.new(color.white, 25), inline='style', group='Label style')
+style_low_option = input.string(title='', defval='Triangle up (▲)', options=['Triangle up (▲)', 'Triangle down (▼)', 'Arrow up (↑)', 'Arrow down (↓)', 'Label up (⬆)', 'Label down (⬇)', 'Plus (+)', 'Cross (⨯)', 'Circle (●)', 'Diamond (◆)', 'Flag (⚑)', 'Square (■)', 'None'], inline='style', group='Label style')
+
+line_high_color = input.color(title='High', defval=color.new(color.white, 25), inline='line style', group='Line style')
+line_high_style_option = input.string(title='', defval='solid (─)', options=['solid (─)', 'dotted (┈)', 'dashed (╌)', 'arrow left (←)', 'arrow right (→)', 'arrows both (↔)'], inline='line style', group='Line style')
+line_low_color = input.color(title='Low', defval=color.new(color.white, 25), inline='line style', group='Line style')
+line_low_style_option = input.string(title='', defval='solid (─)', options=['solid (─)', 'dotted (┈)', 'dashed (╌)', 'arrow left (←)', 'arrow right (→)', 'arrows both (↔)'], inline='line style', group='Line style')
+line_crossed_style_option = input.string(title='Crossed Line', defval='dotted (┈)', options=['solid (─)', 'dotted (┈)', 'dashed (╌)', 'arrow left (←)', 'arrow right (→)', 'arrows both (↔)'], inline='line style', group='Line style')
+
+var style_high = (style_high_option == 'Triangle up (▲)') ? label.style_triangleup :
+     (style_high_option == 'Triangle down (▼)') ? label.style_triangledown :
+     (style_high_option == 'Arrow up (↑)') ? label.style_arrowup :
+     (style_high_option == 'Arrow down (↓)') ? label.style_arrowdown :
+     (style_high_option == 'Label up (⬆)') ? label.style_label_up :
+     (style_high_option == 'Label down (⬇)') ? label.style_label_down :
+     (style_high_option == 'Plus (+)') ? label.style_cross:
+     (style_high_option == 'Cross (⨯)') ? label.style_xcross :
+     (style_high_option == 'Circle (●)') ? label.style_circle :
+     (style_high_option == 'Diamond (◆)') ? label.style_diamond :
+     (style_high_option == 'Flag (⚑)') ? label.style_flag :
+     (style_high_option == 'Square (■)') ? label.style_square :
+     (style_high_option == 'None') ? label.style_none :
+         label.style_triangledown
+
+var style_low = (style_low_option == 'Triangle up (▲)') ? label.style_triangleup :
+     (style_low_option == 'Triangle down (▼)') ? label.style_triangledown :
+     (style_low_option == 'Arrow up (↑)') ? label.style_arrowup :
+     (style_low_option == 'Arrow down (↓)') ? label.style_arrowdown :
+     (style_low_option == 'Label up (⬆)') ? label.style_label_up :
+     (style_low_option == 'Label down (⬇)') ? label.style_label_down :
+     (style_low_option == 'Plus (+)') ? label.style_cross:
+     (style_low_option == 'Cross (⨯)') ? label.style_xcross :
+     (style_low_option == 'Circle (●)') ? label.style_circle :
+     (style_low_option == 'Diamond (◆)') ? label.style_diamond :
+     (style_low_option == 'Flag (⚑)') ? label.style_flag :
+     (style_low_option == 'Square (■)') ? label.style_square :
+     (style_low_option == 'None') ? label.style_none :
+         label.style_triangleup
+
+var line_high_style = (line_high_style_option == 'dotted (┈)') ? line.style_dotted :
+     (line_high_style_option == 'dashed (╌)') ? line.style_dashed :
+     (line_high_style_option == 'arrow left (←)') ? line.style_arrow_left :
+     (line_high_style_option == 'arrow right (→)') ? line.style_arrow_right :
+     (line_high_style_option == 'arrows both (↔)') ? line.style_arrow_both :
+         line.style_solid
+
+var line_low_style = (line_low_style_option == 'dotted (┈)') ? line.style_dotted :
+     (line_low_style_option == 'dashed (╌)') ? line.style_dashed :
+     (line_low_style_option == 'arrow left (←)') ? line.style_arrow_left :
+     (line_low_style_option == 'arrow right (→)') ? line.style_arrow_right :
+     (line_low_style_option == 'arrows both (↔)') ? line.style_arrow_both :
+         line.style_solid
+
+var line_crossed_style = (line_crossed_style_option == 'solid (─)') ? line.style_solid :
+     (line_crossed_style_option == 'dashed (╌)') ? line.style_dashed :
+     (line_crossed_style_option == 'arrow left (←)') ? line.style_arrow_left :
+     (line_crossed_style_option == 'arrow right (→)') ? line.style_arrow_right :
+     (line_crossed_style_option == 'arrows both (↔)') ? line.style_arrow_both :
+         line.style_dotted
+
+var label[] high_labels = array.new_label()
+var label[] low_labels = array.new_label()
+var line[] high_lines = array.new_line()
+var line[] low_lines = array.new_line()
+
+replot_line(lines) =>
+    if array.size(lines) > 0
+        for i = array.size(lines) - 1 to 0 by 1
+            line_ = array.get(lines, i)
+            y1 = line.get_y1(line_)
+            if bar_index == line.get_x2(line_) and not( high > y1 and low < y1 )
+                line.set_x2(line_, bar_index + 1)
+            else
+                line.set_style(line_, line_crossed_style)
+
+if show_high and ta.pivothigh(len, len)
+    array.push(high_labels, label.new(bar_index - len, high[len], yloc=yloc.abovebar, color=color_high, style=style_high, size=size.auto))
+    if show_lines
+        array.push(high_lines, line.new(x1=bar_index - len, y1=high[len], x2=bar_index, y2=high[len], color=line_high_color, style=line_high_style))
+
+if show_low and ta.pivotlow(len, len)
+    array.push(low_labels, label.new(bar_index - len, low[len], yloc=yloc.belowbar, color=color_low, style=style_low, size=size.auto))
+    if show_lines
+        array.push(low_lines, line.new(x1=bar_index - len, y1=low[len], x2=bar_index, y2=low[len], color=line_low_color, style=line_low_style))
+
+if array.size(high_labels) > 0
+    for i = array.size(high_labels) - 1 to 0
+        if del_high and high > label.get_y(array.get(high_labels, i))
+            label.delete(array.get(high_labels, i))
+            array.remove(high_labels, i)
+            if show_lines
+                line.delete(array.get(high_lines, i))
+                array.remove(high_lines, i)
+
+if array.size(low_labels) > 0
+    for i = array.size(low_labels) - 1 to 0
+        if del_low and low < label.get_y(array.get(low_labels, i))
+            label.delete(array.get(low_labels, i))
+            array.remove(low_labels, i)
+            if show_lines
+                line.delete(array.get(low_lines, i))
+                array.remove(low_lines, i)
+
+if array.size(high_labels) > point_max
+    label.delete(array.shift(high_labels))
+    if show_lines
+        line.delete(array.shift(high_lines))
+
+if array.size(low_labels) > point_max
+    label.delete(array.shift(low_labels))
+    if show_lines
+        line.delete(array.shift(low_lines))
+
+if show_lines
+    replot_line(high_lines)
+    replot_line(low_lines)
